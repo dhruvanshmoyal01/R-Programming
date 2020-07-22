@@ -1,0 +1,256 @@
+---
+title: "Unsupervised_Learning"
+author: "Echo"
+date: "09/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# ACQUIRING THE DATA
+```{r}
+
+# setwd()
+movie_data = read.csv("movie_metadata.csv", header = TRUE) 
+
+names(movie_data)
+str(movie_data)
+summary(movie_data)
+
+```
+
+
+# Problem Statements:
+1. Rate/Rank the directors based on the movies's budget and gross collection.
+
+```{r}
+
+
+Budg_Collect_DS = movie_data[, c("director_name", "movie_title", "budget", "gross")]
+anyNA(Budg_Collect_DS)
+Budg_Collect_DS = na.omit(Budg_Collect_DS)
+
+dim(Budg_Collect_DS)
+names(Budg_Collect_DS)
+
+scaled_DS = scale(Budg_Collect_DS[, -(1:2)])
+dim(scaled_DS)
+
+```
+
+
+##################################################################################################################################################
+# K-Mean Clustering :
+
+## How to identify the optimal clusters/groups ?
+```{r}
+# install.packages("factoextra")
+library(factoextra)
+
+fviz_nbclust(scaled_DS, kmeans, method = "wss")+
+  #geom_vline(xintercept = 3, linetype = 2)+
+  labs(subtitle = "Elbow_Scree method")
+
+```
+
+
+## How to identify the optimal clusters/groups ? (PPT Method)
+```{r}
+## How to identify the optimal clusters/groups ?
+# wssplot <- function(data, nc=15, seed=1234){
+#   wss <- (nrow(data)-1)*sum(apply(data,2,var))
+#   for (i in 2:nc){
+#     set.seed(seed)
+#     wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+#   plot(1:nc, wss, type="b", xlab="Number of Clusters",
+#        ylab="Within groups sum of squares")
+#   }
+# 
+#  wssplot(scaled_DS, nc=7)
+#  abline(v=3,lty=3)
+```
+
+
+## K Mean Clustering model
+```{r}
+
+clustering_DS = kmeans(scaled_DS, centers = 3)
+names(clustering_DS)
+head(clustering_DS$cluster)
+head(scaled_DS)
+
+Budg_Collect_DS$cluster_kmeans = clustering_DS$cluster
+str(Budg_Collect_DS)
+head(Budg_Collect_DS)
+
+# finding out the top 10 rows of each cluster
+head(Budg_Collect_DS[Budg_Collect_DS$cluster_kmeans==1,],10)
+head(Budg_Collect_DS[Budg_Collect_DS$cluster_kmeans==2,],10)
+head(Budg_Collect_DS[Budg_Collect_DS$cluster_kmeans==3,],10)
+
+```
+
+
+## Profiling-K Means :
+`Data profiling is a technique used to analyze and gain a better understanding of raw data. It is the first step in determining what insights data can yield when you run it through machine learning algorithms in order to make predictions.`
+```{r}
+aggr = aggregate(Budg_Collect_DS[, -c(1:2)], list(Budg_Collect_DS$cluster_kmeans), mean)
+class(aggr)
+
+aggr$min = aggregate(Budg_Collect_DS[, -c(1:2)], list(Budg_Collect_DS$cluster_kmeans), min)
+aggr$max = aggregate(Budg_Collect_DS[, -c(1:2)], list(Budg_Collect_DS$cluster_kmeans), max)
+
+head(aggr)
+
+as.vector(aggr$min)
+as.vector(aggr$max)
+
+clus.profile = data.frame( cluster = aggr[ ,1],
+                           Freq = as.vector(table(Budg_Collect_DS$cluster_kmeans)),
+                           aggr[,-1])
+
+clus.profile$budget = clus.profile$budget/1000000
+clus.profile$gross = clus.profile$gross/1000000
+
+clus.profile
+
+```
+
+
+
+
+#############################################################################################################################
+# C-Means Clustering
+```{r}
+
+names(Budg_Collect_DS)
+
+```
+
+## C Mean clustering Model
+```{r}
+library(e1071)
+
+cluster_cmean = cmeans(scaled_DS, 3)
+names(cluster_cmean)
+head(cluster_cmean$membership)
+head(cluster_cmean$cluster)
+
+cluster_cmean$size
+
+Budg_Collect_DS$cluster_cmean = cluster_cmean$cluster
+
+head(Budg_Collect_DS[Budg_Collect_DS$cluster_cmean == 1,],10)
+head(Budg_Collect_DS[Budg_Collect_DS$cluster_cmean == 2,],10)
+head(Budg_Collect_DS[Budg_Collect_DS$cluster_cmean == 3,],10)
+
+```
+
+## Profiling C Means :
+```{r}
+names(Budg_Collect_DS)
+
+aggr = aggregate(Budg_Collect_DS[, -c(1:2,5)], list(Budg_Collect_DS$cluster_cmean), mean)
+
+clus.profile_cmeans = data.frame( cluster = aggr[,1],
+                                  Freq = as.vector(table(Budg_Collect_DS$cluster_cmean)),
+                                  aggr[,-1]
+                                )
+
+clus.profile_cmeans
+
+clus.profile_cmeans$budget = clus.profile_cmeans$budget/1000000
+clus.profile_cmeans$gross = clus.profile_cmeans$gross/1000000
+
+clus.profile_cmeans
+
+```
+
+
+
+#########################################################################################################################
+# Hierarchical Clustering :
+
+## Distance Calculation 
+```{r}
+names(Budg_Collect_DS)
+dim(Budg_Collect_DS)
+
+# subsetting our data frame as hierarchical clustering is not a good idea for large data sets
+subset_mov = scaled_DS[1:20, ]
+class(subset_mov)
+
+row.names(subset_mov) = Budg_Collect_DS[1:20, "director_name"]
+
+distance = dist(as.matrix(subset_mov))
+distance
+
+```
+
+
+## Find H clustering
+```{r}
+hc = hclust(distance)
+
+plot(hc)
+rect.hclust(hc, k=4, border = "red")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

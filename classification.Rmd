@@ -1,0 +1,201 @@
+---
+title: "Classification"
+author: "Echo"
+date: "04/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Read Dataset
+```{r}
+rm(list=ls())
+#install.packages("memisc")
+library(memisc)
+
+setwd("D:\\HeadFirst\\Data Science\\data set")
+diabetic_data = read.csv("Diabetes.csv", header = TRUE, stringsAsFactors = FALSE)
+str(diabetic_data)
+diabetic_data$Is_Diabetic = factor(diabetic_data$Is_Diabetic)
+str(diabetic_data)
+```
+
+## Training and Testing data
+```{r}
+library(caTools)
+set.seed(1234)
+index = sample.split(diabetic_data, SplitRatio = 0.7)
+index
+training_data = subset(diabetic_data, index==TRUE)
+testing_data = subset(diabetic_data, index==FALSE)
+dim(training_data)
+dim(testing_data)
+table(testing_data$Is_Diabetic)
+table(training_data$Is_Diabetic)
+```
+
+
+## Model Generation : Decision Tree
+```{r}
+library(rpart) # To create the model
+library(rpart.plot) # To plot the model
+
+decisionTree_Model = rpart(Is_Diabetic~., training_data, method = "class")
+# above tilde (~) says that Is_Diabetic is dependent on
+# dot (.) says all the variable
+decisionTree_Model
+
+rpart.plot(decisionTree_Model, cex = 0.7, extra = 101, nn = TRUE, nn.cex = 0.6)
+
+path.rpart(decisionTree_Model,c(15,29,57,47,93,45,185,45,43)) # Gives classification rule / bussiness rules 
+
+
+```
+
+
+##  To further increase the accuracy of decision tree by the method of pruning
+# pruning -> deleting the a few leaf node at the cost of increasing entropy on their upper node
+```{r}
+
+decisionTree_Model$cptable
+pruned_tree = prune(decisionTree_Model, "0.01923077", "CP")
+rpart.plot(decisionTree_Model, cex = 0.7, extra = 101, nn = TRUE, nn.cex = 0.6)
+
+#Evaluating our prune tree 
+pred_test_dt = predict(pruned_tree, testing_data, type = "class")
+confusionMatrix(table(pred_test_dt, testing_data$Is_Diabetic))
+
+```
+
+
+## Model Evaluation 
+```{r}
+
+pred_test_dt = predict(decisionTree_Model, testing_data, type = "class")
+pred_test_dt
+table(pred_test_dt)
+
+library(caret)
+confusionMatrix(table(pred_test_dt, testing_data$Is_Diabetic))
+```
+
+
+##################################################################################################
+## Random Forest
+## Model Creation
+```{r}
+library(randomForest)
+randomForest_Model = randomForest(Is_Diabetic~., training_data, ntree=501)
+
+randomForest_Model
+
+```
+
+# Model Evaluation : on test data 
+```{r}
+pred_test_rf = predict(randomForest_Model, testing_data, type = "class")
+
+confusionMatrix(table(pred_test_rf, testing_data$Is_Diabetic))
+
+```
+
+#############################################################################################################
+# Naive Bais
+
+```{r}
+
+library(e1071)
+naiveBais_Model = naiveBayes(Is_Diabetic~., training_data)
+naiveBais_Model
+
+```
+
+
+
+# Model Evaluation 
+
+```{r}
+
+str(testing_data)
+
+pred_test_nb = predict(naiveBais_Model, testing_data, type = "class")
+confusionMatrix(pred_test_nb, testing_data$Is_Diabetic)
+
+```
+
+##################################################################################################################################
+# Support Vector Machine
+
+```{r}
+library(e1071)
+svm_Model = svm(Is_Diabetic~., data = training_data, kernel = "linear", cost = 0.1, scale = F)
+
+summary(svm_Model)
+```
+
+```{r}
+
+pred_test_svm = predict(svm_Model, testing_data, type = "class")
+confusionMatrix(pred_test_svm, testing_data$Is_Diabetic)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

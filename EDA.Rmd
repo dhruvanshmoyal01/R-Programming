@@ -1,0 +1,314 @@
+---
+title: "EDA"
+author: "Echo"
+date: "05/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Lets use this R chunk to load required libraries and set project working directory
+
+# This library is used for formating text (bold, color, font, size etc)
+#install.packages("kableExtra")
+library(kableExtra)
+
+# set working directory
+setwd("D:\\HeadFirst\\Data Science\\data set")
+```
+
+We will use IMDB data set which has data about 5000 movies.
+Using this dataset we will solve some of the task given below to cover today's topic.
+
+1. `r text_spec("know top 10 movies which  have the highest profit ?", color = "blue")`
+2. `r text_spec("Know top rated movies in the list and also average IMDB score ?", color = "blue")`
+3. `r text_spec("Plot a graphical representation to show number of movies release each year ?", color = "blue")`
+
+## Phase 1 : DATA ACQUISITION
+In this phase, based on the source from where we have to gather data, we write R code to acquire them.
+
+*So of the type of acquisition can be from:*
+
+1. CSV(at rest)
+2. CSV(from web)
+3. Excel
+4. MySQL database
+5. WebScraping (unstructured)
+6. XML
+7. JSON
+8. API
+
+Let's now write command to acquire the data from above source types
+
+```{r}
+# Load CSV file from WEB
+url = "https://people.sc.fsu.edu/~jburkardt/data/csv/deniro.csv"
+download.file(url, destfile = "deniro.csv")
+
+camera_data = read.csv("deniro.csv", header = TRUE)
+head(camera_data)
+```
+
+
+```{r}
+# Load Excel Files
+# install.packages("readxl")
+library(readxl)
+
+setwd("D:\\HeadFirst\\Data Science\\data set")
+movie_data = read_xlsx("movie_metadata_excel.xlsx", sheet = "movie_metadata")
+head(movie_data)
+
+```
+
+```{r}
+
+# Load CSV file rest 
+movie_data = read.csv("movie_metadata.csv", header = TRUE)
+str(movie_data)
+
+my_dataframe = as.data.frame(matrix(nrow = 3, ncol = 4)) 
+
+```
+
+
+
+
+We have now acquired the raw data, we will have to now make sure that data is clean and thus prepare it for modelling.
+
+###############################################################################################################################################
+
+## Phase 2 : DATA PREPERATION 
+
+This phase has multiple sub-phases like :
+
+1.**Data Wrangling** : Here we do cleaning, standardizing, derive, or remove unwanted columns.
+          + Data subsetting -> Create a new dataset out of existing dataset.
+          + Data filtering 
+          + Removing null values
+          + Text Manipulation
+
+2. **Data Exploration** : Here we explore and understand data.
+          + Find number of rows and columns in dataset.
+          + Understand and display initial top and last records of dataset.
+          + Understand and display names of columns.
+          + Understand the structure of columns.
+          + Display all the records of dataset.
+          
+3. **Data Visualization** : Here we do visual representation of data.
+          + Boxplot
+          + Histogram
+          + Scatter plot 
+
+## Data Wrangling 
+```{r}
+# Give dimension of dataframe
+dim(movie_data) 
+# TO find column names 
+names(movie_data) 
+colnames(movie_data)
+# To find data of specific index
+# movie_data[row, column]
+movie_data[, "director_name"]
+movie_data[ , c("actor_2_name", "director_name", "gross")]
+
+color_movie = movie_data[movie_data[ , "color"]=="Color", ]
+color_movie = movie_data[movie_data$color=="Color", ]
+
+temp1 = movie_data[,2:5]
+names(temp1)
+head(temp1)
+dim(temp1)
+
+temp2 = movie_data[2:5, 2:5]
+names(temp2)
+head(temp2)
+dim(temp2)
+```
+
+```{r}
+
+# Cleaning : Removing records which have NA(Blank)
+
+# Identifying if dataset have NA
+anyNA(movie_data)
+
+# Which cells have NA
+head(is.na(movie_data))
+
+# Identify which column have how many NA's
+colSums(is.na(movie_data))
+
+# Missing value treatment
+movie_data_clean = na.omit(movie_data)
+dim(movie_data_clean)
+str(movie_data_clean)
+```
+
+```{r}
+
+head(movie_data_clean)
+# Text Manipulation
+head(movie_data_clean$movie_title)
+
+# remove unwanted text from dataset
+movie_data_clean$movie_title = sub(pattern = "Â", replacement = "", x = movie_data_clean$movie_title)
+
+head(movie_data_clean$movie_title)
+head(trimws(movie_data_clean$movie_title))
+
+class(movie_data_clean$movie_title)
+
+#movie_data_clean$movie_title =trimws(movie_data_clean$movie_title, which = "both")
+```
+
+## Data Exploration 
+
+```{r}
+# Write R code for data exploration/ analysis
+
+dim(movie_data_clean)
+
+nrow(movie_data_clean)
+ncol(movie_data_clean)
+
+head(movie_data_clean)
+tail(movie_data_clean)
+
+names(movie_data_clean)
+
+str(movie_data_clean)
+
+?levels
+levels(movie_data_clean)
+
+summary(movie_data_clean)
+```
+
+# Now to solve our problems
+1. `r text_spec("Know top 10 movies with the highest profit?", color="blue")`
+
+```{r}
+# We will take the cleaned dataset
+
+str(movie_data_clean)
+
+movie_data_clean$profit_loss = movie_data_clean$gross - movie_data_clean$budget
+head(movie_data_clean$profit_loss, 10)
+
+movie_data_clean = movie_data_clean[order(-movie_data_clean$profit_loss), ]  
+head(movie_data_clean)  
+
+head(cbind(movie_data_clean$movie_title, movie_data_clean$profit_loss),10)
+
+```
+
+
+2. `r text_spec("Know the top rated movie in the list and also average IMDB score?", color = "blue")`
+
+```{r}
+
+# Top 10 movies my IMDB rating/score
+movie_data_clean = movie_data_clean[order(-movie_data_clean$imdb_score), ]
+head(cbind(movie_data_clean$movie_title, movie_data_clean$imdb_score), 10)
+
+# Average IMDB rating
+
+mean(movie_data_clean$imdb_score)
+
+```
+
+## Data Visualization
+
+```{r}
+# Boxplot
+boxplot(movie_data_clean$imdb_score, horizontal = TRUE)
+
+```
+
+
+
+```{r}
+# Histogram
+
+hist(movie_data_clean$title_year)
+
+```
+
+
+```{r}
+# Scatter plot
+
+plot(movie_data_clean$duration)
+
+plot(movie_data_clean$gross, movie_data_clean$budget)
+
+```
+
+
+3. `r text_spec("Plot a graphical repersentation to show number of movies release each year?", color = "blue")`
+
+```{r}
+
+# Write R code for visualization
+# Histogram
+max(movie_data_clean$title_year, na.rm = TRUE)
+min(movie_data_clean$title_year, na.rm = TRUE)
+m_break = seq(min(movie_data_clean$title_year, na.rm = TRUE), max(movie_data_clean$title_year, na.rm = TRUE), by = 1)
+
+hist(movie_data_clean$title_year, breaks = m_break)
+hist_data = hist(movie_data_clean$title_year, breaks = m_break)
+
+# Index of years where highest movies 
+# temp = hist_data[order(-hist_data$counts), ]
+which.max(hist_data$count)
+hist_data$mids[82]
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

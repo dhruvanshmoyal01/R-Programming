@@ -1,0 +1,196 @@
+---
+title: "Text Mining"
+author: "Echo"
+date: "13/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Load of required libraries 
+```{r}
+
+# install.packages("tm")
+library(tm)
+# install.packages("SnowballC")
+library(SnowballC)
+# install.packages("dplyr")
+library(dplyr)
+
+```
+
+
+# Set Working Directory 
+```{r}
+
+setwd("D:\\RStudio-workspace\\Dataset\\")
+
+```
+
+# Acquire/Load required dataset 
+```{r}
+
+bookHP6 = readLines("HP6 - The Half Blood Prince.txt")
+bookHP7 = readLines("HP7 - Deathly Hollows.txt")
+
+# Converting the files into CORPUSes
+      # To convert any file into a CORPUS, it first needs to be converted into a vector source
+corpusHP6 = Corpus(VectorSource(bookHP6))
+corpusHP7 = Corpus(VectorSource(bookHP7))
+ 
+```
+
+
+# Bag of words for HP6 
+```{r}
+
+my_Stopwords = c(stopwords("english"), c("said", "got", "and", "just","now","back"))
+
+# Redirection operator -> %>%
+
+corpusHP6 = Corpus(VectorSource(bookHP6)) %>%
+            tm_map(removePunctuation) %>%
+            tm_map(removeNumbers) %>%
+            tm_map(content_transformer(tolower)) %>%
+            tm_map(removeWords, my_Stopwords) %>%
+            tm_map(stripWhitespace)
+
+## How do we read individual document in corpus ????????
+
+# Making a document term matrix
+dtmHP6 = DocumentTermMatrix(corpusHP6)
+
+# Remove Sparcity 
+dtmHP6 = removeSparseTerms(dtmHP6, 0.99)
+
+# Calculate the frequency of each word
+word.freqHP6 = sort(colSums(as.matrix(dtmHP6)), decreasing = T)
+
+# Find the relative proprtional of words 
+tableHP6 = data.frame(Word = names(word.freqHP6), 
+                      Absolute.Freq = word.freqHP6,
+                      Relative.Freq = word.freqHP6/length(word.freqHP6)
+                      )
+                      
+write.csv(tableHP6, "HP6_wordFreq.csv", row.names = FALSE)
+
+```
+
+
+# Bag of words - HP7 book 
+```{r}
+
+corpusHP7 = Corpus(VectorSource(bookHP7)) %>%
+            tm_map(removePunctuation) %>%
+            tm_map(removeNumbers) %>%
+            tm_map(content_transformer(tolower)) %>%
+            tm_map(removeWords, my_Stopwords) %>%
+            tm_map(stripWhitespace) %>%
+            tm_map(stemDocument)
+
+# Replacing harri with harry -------------------Not working
+# tm_map(corpusHP7, replace(corpusHP7, list = c("harri"), list = c("harry")))
+
+dtmHP7 = DocumentTermMatrix(corpusHP7)
+
+# Remove Sparcity
+dtmHp7 = removeSparseTerms(dtmHP7, 0.99)
+
+# Now calculate the frequency of each word 
+word.freqHP7 = sort(colSums(as.matrix(dtmHp7)), decreasing = T)
+
+# Find the relative proportion of words
+tableHP7 = data.frame(Word = names(word.freqHP7),
+                      Absolute.Freq = word.freqHP7,
+                      Relative.Freq = word.freqHP7/length(word.freqHP7)
+                      )
+
+```
+
+# Combine to bag of words for 2 books 
+```{r}
+
+finalTable = tableHP6 %>% merge(tableHP7, by = "Word")
+finalTable$Wordfreq = finalTable$Absolute.Freq.x + finalTable$Absolute.Freq.y 
+
+head(finalTable)
+nrow(finalTable)
+```
+
+
+# Create a word cloud 
+```{r}
+
+#install.packages("wordcloud")
+library(wordcloud)
+
+pal = brewer.pal(8, "Dark2")
+
+wordcloud(words = finalTable$Word,
+          freq = finalTable$Wordfreq,
+          min.freq = 50, 
+          random.order = F, 
+          colors = pal,
+          max.words = 100)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

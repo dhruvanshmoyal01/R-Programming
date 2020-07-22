@@ -1,0 +1,103 @@
+---
+title: "LogisticRegression"
+author: "Echo"
+date: "21/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# LOGISTIC REGRESSION
+
+```{r}
+rm(list=ls())
+#install.packages("memisc")
+library(memisc)
+
+setwd("E:/Eudreka/004-LR_Logit/")
+diabetic_data = read.csv("Diabetes.csv",header=TRUE,stringsAsFactors = FALSE)
+str(diabetic_data)
+
+diabetic_data$Is_Diabetic_Flag =factor(diabetic_data$Is_Diabetic)
+
+# binning
+diabetic_data$age_bins = cut(diabetic_data$Age, 
+                             breaks = c(18,25,35,65,100 ), 
+                              labels=c(">25","25-35","35-65",">65"))
+head(diabetic_data)
+str(diabetic_data)
+diabetic_data = diabetic_data[,-which(colnames(diabetic_data)=="Is_Diabetic")]
+diabetic_data =diabetic_data[,-which(colnames(diabetic_data)=="Age")]
+
+```
+
+## Logit : Trainig and Test Dataset
+
+```{r}
+library(caTools)
+set.seed(100)
+index = sample.split(diabetic_data, SplitRatio = 0.7)
+#index
+training_data = subset(diabetic_data, index==TRUE)
+testing_data = subset(diabetic_data, index==FALSE)
+dim(training_data)
+
+table(diabetic_data$Is_Diabetic_Flag)/nrow(diabetic_data)
+table(training_data$Is_Diabetic_Flag)/nrow(training_data)
+table(testing_data$Is_Diabetic_Flag)/nrow(testing_data)
+
+```
+
+# Logit : Model 
+```{r}
+logit_model = glm(Is_Diabetic_Flag~., data=training_data,family = "binomial")
+summary(logit_model)
+
+```
+
+## Logit : prediction using test data
+```{r}
+dim(testing_data)
+pred_test = predict(logit_model,testing_data,type="response")
+
+View(pred_test)
+
+# Confusion matrix when cutoff is 0.5 / Acc = 0.7656
+library(caret)
+pred_class = ifelse(pred_test>0.5,"YES","NO") 
+pred_class = as.factor(pred_class)
+confusionMatrix(pred_class,testing_data$Is_Diabetic_Flag)
+
+# Confusion matrix when cutoff is 0.3  / Acc =  0.7344
+pred_class = ifelse(pred_test>0.3,"YES","NO")
+pred_class = as.factor(pred_class)
+confusionMatrix(pred_class,testing_data$Is_Diabetic)
+
+# Confusion matrix when cutoff is 0.7 / Acc =  0.7383
+pred_class = ifelse(pred_test>0.7,"YES","NO")
+pred_class = as.factor(pred_class)
+confusionMatrix(pred_class,testing_data$Is_Diabetic)
+
+```
+
+
+## Use ROC curve to find out better cut-off
+ROC is Receiver Operating Characteristic : summarizes model performance by evaluating the trade off between TPR(Sensitivity) and FPR(1-specificity)
+```{r}
+library(ROCR)
+ROC_pred = prediction(pred_test,testing_data$Is_Diabetic)
+ROC_perf = performance(ROC_pred,"tpr","fpr")
+
+plot(ROC_perf,col="blue",print.cutoffs.at=seq(0.1,by=0.1),text.adj=c(-0.2,1.7),cex=0.7)
+
+```
+
+```{r}
+# Confusion matrix when cutoff is 0.4
+pred_class = ifelse(pred_test>0.4,"YES","NO")
+pred_class = as.factor(pred_class)
+confusionMatrix(pred_class,testing_data$Is_Diabetic)
+
+```

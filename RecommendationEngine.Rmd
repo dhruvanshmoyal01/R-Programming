@@ -1,0 +1,449 @@
+---
+title: "RecommendationEngine"
+author: "Echo"
+date: "11/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#########################################################################################################################################################
+# ASSOCIATION RULES 
+# Add the required libraries 
+```{r}
+# install.packages("arules")
+library(arules)
+
+```
+
+# Read the groceries transactional data 
+```{r}
+
+groceries = read.transactions("groceries.csv", sep = ",")
+groceries
+
+```
+
+# Understand the transaction grocery 
+```{r}
+
+summary(groceries)
+
+```
+
+# Read the transactional items
+```{r}
+
+# TOO large avoid executing 
+# inspect(groceries)
+
+inspect(groceries[1:10])
+
+```
+
+
+# Identify the support values for certain item 
+```{r}
+
+itemFrequency(groceries[, 1]) #single item
+
+itemFrequency(groceries[,1:10]) # multiple items
+
+# Vizualisation
+
+itemFrequencyPlot(groceries, support = 0.08)
+itemFrequencyPlot(groceries, topN = 5)
+
+```
+
+
+# Getting Association Rules using apriori function
+
+## Default Run 
+```{r}
+
+basket1 = apriori(groceries) # default support of 0.1 and confidance of 0.80
+summary(basket1)
+class(basket2)
+
+
+
+```
+
+
+## Default Run 
+```{r}
+
+basket2 = apriori(groceries, parameter = list(support = 0.007, confidence = 0.5))
+summary(basket2)
+
+# Find out a few of the association rule based on above filter
+inspect(basket2[1:3])
+
+# Displaying sorted association rule by descendeing order of lift
+inspect(sort(basket2, by = "lift")[1:5])
+
+```
+
+# Find out Items purchased AFTER customers had "milk and soda " already in their basket 
+```{r}
+
+basket3 = apriori(groceries, parameter = list(support = 0.007, confidence = 0.2),
+                  appearance = list(default="rhs", lhs = c("whole milk", "soda")))
+
+inspect(basket3[1:9])
+
+```
+
+## Visulization of association rule 
+```{r}
+
+# install.packages("arulesviz")
+library(arulesViz)
+plot(basket3)
+
+```
+
+
+#####################################################################################################################################################
+
+# RECOMMENDATION ENGINES 
+
+##########################################3
+
+1. User Based Collaborative Filtering (UBCF)
+2. Content Based Filtering (CBF)
+
+## Recommendation Engine library 
+```{r}
+
+# install.packages("recommenderlab")
+library(recommenderlab)
+
+```
+
+## Load Jester5k(jokes) dataset from above packages
+```{r}
+
+# Matrix of 5000 user rated 100 jokes between +10 to -10
+data("Jester5k")
+
+# Real rating matrix is very compact as compared to default R matrix class
+nratings(Jester5k)
+
+class(Jester5k)
+
+```
+
+## recommender matrix vs R default matrix 
+```{r}
+
+size1 = object.size(Jester5k)
+size2 = object.size(as(Jester5k, "matrix"))
+ratio = size2/size1;
+
+```
+
+## Lets see why we should be having matrix format as compared to other format 
+```{r}
+
+# As Dataframe
+head(as(Jester5k, "data.frame"))
+
+# As matrix 
+head(as(Jester5k, "matrix"))[, 1:10]
+
+
+```
+
+## Visual representation of data 
+```{r}
+
+hist(getRatings(Jester5k), breaks = 100)
+
+hist(getRatings(normalize(Jester5k)), breaks = 100)
+
+```
+
+
+## Various modeling tecniques available in recommenderlab package
+```{r}
+
+recommederlab = recommenderRegistry$get_entries(datatype = "realRatingMatrix")
+names(recommederlab)
+
+```
+
+
+# Building UBCF Model 
+
+## Training and testing datasets
+```{r}
+
+library(caTools)
+set.seed(3)
+index = sample(x=c(TRUE,FALSE), nrow(Jester5k), prob = c(0.8, 0.2), replace = TRUE)
+
+jester_train = subset(Jester5k, index == TRUE)
+jester_test = subset(Jester5k, index == FALSE)
+
+dim(Jester5k)
+dim(jester_train)
+dim(jester_test)
+```
+
+## Building UBCF 
+```{r}
+
+ubcf_model = Recommender(jester_train, method = "UBCF")
+ubcf_model
+
+```
+
+## Find the recommender jokes(10 nos) by each user 
+```{r}
+
+ubcf_pred = predict(ubcf_model, newdata = jester_test, n=10)
+ubcf_pred 
+
+```
+
+## Get the list of jokes by each users
+```{r}
+
+ubcf_list = sapply(ubcf_pred@items, function(x){colnames(Jester5k)[x]})
+ubcf_list[1:10]
+
+```
+
+## List how many recommedation generated for TEST USERS by trained model
+```{r}
+
+number_of_jokes = sort(unlist(lapply(ubcf_list, length)), decreasing = TRUE)
+table(number_of_jokes)
+
+```
+
+## Evaluate the model 
+```{r}
+
+table(rowCounts(Jester5k))
+
+```
+
+###################################################################################
+
+# IBCF Model Generation 
+
+## Filetering Jokes data based on the above observations 
+```{r}
+
+# Remove count of jokes above 80 and create a new dataset
+model_data = Jester5k[rowCounts(Jester5k)<80]
+dim(model_data)
+
+```
+
+
+## Visual spread of dataset 
+```{r}
+
+boxplot(rowMeans(model_data))
+
+boxplot(rowMeans(model_data[rowMeans(model_data) <= 7 & rowMeans(model_data) >-5 ]))
+
+model_data = model_data[rowMeans(model_data) <= 7 & rowMeans(model_data) > -5]
+dim(model_data)
+
+```
+
+## Training and Testing Dataset
+```{r}
+
+library(caTools)
+set.seed(3)
+
+index = sample(x=c(TRUE, FALSE), nrow(model_data), prob = c(0.8,0.2), replace = TRUE)
+
+model_train = subset(model_data, index == TRUE)
+model_test = subset(model_data, index == FALSE)
+
+dim(model_data)
+dim(model_train)
+dim(model_test)
+
+```
+
+## IBCF MODEL
+```{r}
+
+ibcf_model = Recommender(model_train, method = "IBCF", parameter = list(k = 30)) # K number of neighbours
+ibcf_model
+
+ibcf_model_details = getModel(ibcf_model)
+str(ibcf_model_details)
+
+```
+
+
+## Find the recommendation prediction by test users 
+```{r}
+
+ibcf_pred = predict(ibcf_model, model_test, n=5)
+# number of recommendation to be generated by each user
+ibcf_pred
+
+slotNames(ibcf_pred)
+
+first_user = ibcf_pred@items[[1]]
+jokes_by_first_user = ibcf_pred@itemLabels[first_user]
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

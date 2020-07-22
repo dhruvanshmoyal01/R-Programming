@@ -1,0 +1,337 @@
+---
+title: "Sentiment_Analysis"
+author: "Echo"
+date: "17/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#################################################################################################################################################################
+
+# Sentiment Analysis 
+
+#################################################################################################################################################################
+
+# Load the tweets data : Apple data
+```{r}
+
+# setwd()
+
+tweets.df = read.csv("tweets.csv")
+str(tweets.df)
+tweets.df$created = as.Date(tweets.df$created, format = "%m/%d/%Y")
+tweets.df$Tweet = as.character(tweets.df$Tweet)
+
+View(tweets.df)
+
+```
+
+#### Cleaning the text data by removing links, tags and delimiters. 
+#### Build a Corpus and specify the location to be the character vectors. 
+```{r}
+
+library(tm)
+# install.packages("gsubfn")
+library(gsubfn)
+library(lubridate)
+
+myCorpus = Corpus(VectorSource(tweets.df$Tweet))
+
+myCorpus = tm_map(myCorpus, tolower)
+head(myCorpus[[1]])
+
+myStopwords = c((stopwords('english')), c("apple", 
+                                          "apples",
+                                          "com",
+                                          "twitter",
+                                          "u",
+                                          "de",
+                                          "can",
+                                          "get",
+                                          "app",
+                                          "rt",
+                                          "iphones",
+                                          "iphone",
+                                          "new",
+                                          "pic",
+                                          "s",
+                                          "http"))
+
+
+myCorpus = tm_map(myCorpus, removeWords, myStopwords)
+  
+removeSingle <- function(x) gsubfn(".", 
+                                   list("-" = " ", 
+                                        "!" = " ",
+                                        "#"=" ",
+                                        ","=" ",
+                                        "."=" ",
+                                        ";"=" ",
+                                        "?"=" ",
+                                        "@"=" ",
+                                        ":"=" ",
+                                        "\""=" ",
+                                        "&"=" ",
+                                        "'"=" ",
+                                        "("=" ",
+                                        ")"=" ",
+                                        "{"=" ",
+                                        "}"=" "), x)
+
+myCorpus = tm_map(myCorpus, content_transformer(removeSingle))
+myCorpus = tm_map(myCorpus, removePunctuation)
+myCorpus = tm_map(myCorpus, stripWhitespace)
+
+```
+
+# Creating a word cloud 
+```{r}
+
+library(wordcloud)
+library(RColorBrewer)
+
+dtm = DocumentTermMatrix(myCorpus, control = list(wordLengths = c(1, Inf)))
+
+dtm = removeSparseTerms(dtm, 0.99)
+
+word.freq = sort(colSums(as.matrix(dtm)), decreasing = F)
+pal = brewer.pal(8, "Dark2")
+wordcloud(words = names(word.freq), freq = word.freq, min.freq = 2, random.order = F, colors = pal, max.words = 100 )
+
+```
+
+
+# Based  on alg0's available in the packages 
+```{r}
+
+cleanedTweets = data.frame(Tweets = sapply(myCorpus, as.character), stringsAsFactors = FALSE)
+head(cleanedTweets)
+
+# install.packages("syuzhet")
+library(syuzhet)
+
+mysentimentvalue = data.frame(get_sentiment(cleanedTweets$Tweets))
+colnames(mysentimentvalue) = "polarity"
+head(mysentimentvalue)
+mysentimentvalue$date = tweets.df$created 
+
+result = aggregate(polarity ~ date, data = mysentimentvalue, sum)
+plot(result, type = "l")
+
+```
+
+
+##### sentiment Analysis: Plot by date - understanding average sentiment score movement 
+```{r}
+
+result1 = aggregate(polarity~date, data = mysentimentvalue, mean)
+plot(result1, type = "l")
+
+```
+
+
+# Find the emotional valence association with tweets
+
+```{r}
+
+library(syuzhet)
+
+mysentiment = get_nrc_sentiment(cleanedTweets$Tweets)
+class(mysentiment)
+View(mysentiment)
+cleanedTweets[1103, ]
+
+# Get the sentiment score for each emotion
+mysentiment.anger = mean(mysentiment$anger)
+mysentiment.anticipation = mean(mysentiment$anticipation)
+mysentiment.positive =mean(mysentiment$positive)
+mysentiment.disgust = mean(mysentiment$disgust)
+mysentiment.fear = mean(mysentiment$fear)
+mysentiment.joy = mean(mysentiment$joy)
+mysentiment.sadness = mean(mysentiment$sadness)
+mysentiment.surprise = mean(mysentiment$surprise)
+mysentiment.trust = mean(mysentiment$trust)
+mysentiment.negative = mean(mysentiment$negative)
+
+# Create the bar plot
+
+yAxis = c(mysentiment.anger,
+          mysentiment.anticipation,
+          mysentiment.disgust,
+          mysentiment.fear,
+          mysentiment.joy,
+          mysentiment.negative,
+          mysentiment.positive,
+          mysentiment.sadness,
+          mysentiment.surprise,
+          mysentiment.trust
+          )
+
+xAxis = c("Anger", "Anticipation", "Disgust", "Fear", "Joy", "Negative", "Positive", "Sadness", "Surprise", "Trust")
+colors = c("red", "blue", "orange", "red", "green", "red", "green", "orange", "blue", "green") 
+yRange = range(0, yAxis)
+
+barplot(yAxis, names.arg = xAxis, xlab = "Emotional Valence", ylab = "Score", main = "Twitter sentiment", sub = "Apple iphone Launch",
+        col = colors, border = "black", xpd = F, ylim = yRange, axisnames = T, cex.axis = 0.8, col.sub = "blue")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

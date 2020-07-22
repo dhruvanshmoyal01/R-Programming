@@ -1,0 +1,188 @@
+---
+title: "TimeSeries_Forecasting"
+author: "Echo"
+date: "17/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load the libraries and import the required dataset 
+```{r}
+
+# install.packages("forecast")
+library(forecast)
+# install.packages("tseries")
+library(tseries)
+# install.packages("TSA")
+library(TSA)
+# install.packages("timeSeries")
+library(timeSeries)
+
+milk_demand = read.csv("monthly-milk-production-pounds-p.csv", header = FALSE)
+head(milk_demand)
+tail(milk_demand)
+
+```
+
+
+# Convert data into a time series object/format 
+```{r}
+
+milk_demand_ts = ts(milk_demand, frequency = 12)
+
+```
+
+# Visualize the time series data 
+```{r}
+
+par(mfrow = c(1,1))
+plot(milk_demand_ts[,2])
+
+```
+
+# Understanding Airline Passenger data 
+```{r}
+
+# data("AirPassengers")
+airlinePassenger = read.csv("airline.csv", header = TRUE)
+head(airlinePassenger)
+
+```
+
+
+# convert airline data to time Series object 
+```{r}
+
+airlinePassenger.ts = ts(airlinePassenger,
+                         start = c(1949, 1), end = c(1960,12),
+                         frequency = 12
+                         )
+
+plot(airlinePassenger.ts[,2], col = "blue")
+
+```
+
+# De-trending process or converting into a stationary time series 
+```{r}
+
+detrended_passengers = diff(airlinePassenger.ts[,2])
+plot(detrended_passengers, col = "blue" )
+
+head(detrended_passengers)
+# auto correlation factor - q
+acf(detrended_passengers)
+
+# partial auto correlation factor - p
+pacf(detrended_passengers)
+
+```
+
+
+# Creating the auto-arima model 
+```{r}
+
+library(forecast)
+model = auto.arima(airlinePassenger.ts[, 2])
+
+model2 = Arima(airlinePassenger.ts[, 2], order = c(1,0,1))
+model3 = Arima(airlinePassenger.ts[, 2], order = c(1,1,1))
+model4 = Arima(airlinePassenger.ts[, 2], order = c(1,1,0))
+model5 = Arima(airlinePassenger.ts[, 2], order = c(2,1,1), seasonal = c(0,1,0))
+
+
+par(mfrow = c(2,2))
+plot(forecast(model, h = 12))
+plot(forecast(model2, h = 12))
+plot(forecast(model3, h = 12))
+plot(forecast(model4, h = 12))
+plot(forecast(model5, h = 12))
+
+```
+
+
+############################################################################################################################################
+
+# Exponential Time Series (ETS)
+Types of ETs forecasting techniques are:
+1. Single Smoothing Exponential model (when stationary) : use DMA
+2. Double Smoothing Exponential model (when has trend) : use Holt's method
+3. Triple Smoothing Exponential model (when has trend and seasonality) : Use Holt's-Winter method
+
+# Understanding the components of time series 
+```{r}
+
+decompose_passenger = decompose(airlinePassenger.ts[, 2])
+plot(decompose_passenger)
+
+```
+Observations :
+1. Uptrending 
+2. Have Seasonality
+3. also, has white noise(randomness)
+
+# Let's apply Holts-winter method
+```{r}
+
+holtswinter_model = HoltWinters(airlinePassenger.ts[, 2]) 
+
+forecasted_ets = forecast(holtswinter_model, 12)
+
+plot(forecasted_ets)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
